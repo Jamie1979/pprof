@@ -11,7 +11,4 @@ build_script:
   - go build github.com/google/pprof
 
 test_script:
-  - go test -run '' 
-
-
-
+  - go test -v ./...
