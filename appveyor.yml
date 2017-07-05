@@ -1,9 +1,5 @@
-install:
-  - go get -u github.com/golang/lint/golint honnef.co/go/tools/cmd/...
+build: off
 
 branches:
   only:
     - appveyor
-
-test_script:
-  - ./test.sh
