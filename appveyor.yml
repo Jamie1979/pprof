@@ -1,7 +1,5 @@
 clone_folder: c:\go\src\github.com\google\pprof
 
-build: off
-
 branches:
   only:
     - appveyor
@@ -9,10 +7,11 @@ branches:
 before_build:
  - go get github.com/ianlancetaylor/demangle
 
-test_script:
-  - go run github.com/google/pprof/pprof.go
+build_script:
+  - go build github.com/google/pprof
 
-
+test_script
+  - go test -run '' 
 
 
 
