@@ -1,11 +1,11 @@
-clone_folder: c:\go\src\pprof
+clone_folder: c:\go\src\github.com\google\pprof
 
 branches:
   only:
     - appveyor
 
 build_script:
-  - go build pprof
+  - go build github.com/google/pprof
 
 
 
