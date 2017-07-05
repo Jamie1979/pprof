@@ -3,7 +3,7 @@ install:
 
 branches:
   only:
-    -appveyor
+    - appveyor
 
 build_script:
   - go build pprof
