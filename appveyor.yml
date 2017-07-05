@@ -1,4 +1,4 @@
-clone_folder: c:\gopath\src\github.com\google\pprof
+clone_folder: c:\gopath\src\pprof
 
 branches:
   only:
@@ -6,6 +6,8 @@ branches:
 
 build_script:
   - go build pprof
+
+
 
 
 
