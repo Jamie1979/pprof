@@ -7,8 +7,8 @@ branches:
 before_build:
  - go get github.com/ianlancetaylor/demangle
 
-build_script:
-  - go build github.com/google/pprof
+test_script:
+  - go run github.com/google/pprof
 
 
 
