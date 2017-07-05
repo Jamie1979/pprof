@@ -1,4 +1,4 @@
-clone_folder: c:\gopath\src\pprof
+clone_folder: c:\go\src\pprof
 
 branches:
   only:
