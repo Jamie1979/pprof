@@ -12,4 +12,3 @@ build_script:
 
 test_script:
   - go test -v ./...
-  - go tool pprof  -text C:/go/src/github.com/google/pprof/internal/driver/testdata/cppbench.cpu
