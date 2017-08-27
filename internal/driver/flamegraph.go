@@ -28,21 +28,22 @@ import (
 	"github.com/google/pprof/third_party/d3tip"
 )
 
-var flameGraphTemplate = template.Must(template.New("graph").Parse(`<!DOCTYPE html>
+func init() {
+	template.Must(webTemplate.Parse(`
+{{define "flame" -}}
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+       {{template "css" .}}
 	<style>
 		// d3.flameGraph.css
 		{{ .D3FlameGraphCSS }}
 	</style>
 	<style>
-		form {
-     		display:inline;
-		}
-		.page {
+		.flame {
 			display: flex;
 			flex-direction: column;
 			height: 80%;
@@ -51,75 +52,18 @@ var flameGraphTemplate = template.Must(template.New("graph").Parse(`<!DOCTYPE ht
 			min-width: 80%;
 			margin-left: 10%;
 		}
-		button {
-			margin-top: 5px;
-			margin-bottom: 5px;
-		}
-		.detailtext {
-			display: none;
-			position: absolute;
-			background-color: #ffffff;
-			min-width: 160px;
-			border-top: 1px solid black;
-			box-shadow: 2px 2px 2px 0px #aaa;
-			z-index: 1;
-		}
-		.title {
-			font-size: 16pt;
-			padding-left: 0.5em;
-			padding-right: 0.5em;
-		}
-		.details {
-			height: 1.2em;
-			width: 80%;
-			min-width: 80%;
-			margin-left: 10%;
-		}
     </style>
-    <title>{{.Title}} {{.Type}}</title>
+    <title>{{.Title}}</title>
   </head>
   <body>
+        {{template "header" .}}
 	<div>
-		<button id="details-button">&#x25b7; Details</button>
-		<div id="detail-text" class="detailtext">
-		{{range .Legend}}<div>{{.}}</div>{{end}}
-		</div>
-		<select id="type" onchange="location = this.value;">
-		{{range .Types}}
-			<option value="?t={{.}}"{{if eq . $.Type}} selected{{end}}>{{.}}</option>
-		{{end}}
-		</select>
-		<button id="reset">Reset zoom</button>
-		<button id="clear">Clear</button>
-		<button id="graph">Graph</button>
-		<span class="title">{{.Title}}</span>
-		<form id="form">
-			<input id="term" type="text" placeholder="Search" autocomplete="off" autocapitalize="none" size=40>
-			<button id="search">Search</button>
-		</form>
-		<div class="page">
+		<button id="resetzoom">Reset Zoom</button>
+		<div class="flame">
 			<div id="errors">{{range .Errors}}<div>{{.}}</div>{{end}}</div>
 			<div id="chart"></div>
 		</div>
-		<div id="details" class="details"></div>
 	</div>
-	<script type="text/javascript">
-		var detailsButton = document.getElementById("details-button");
-		var detailsText = document.getElementById("detail-text");
-		function handleDetails() {
-			if (detailsText.style.display == "block") {
-				detailsText.style.display = "none"
-				detailsButton.innerText = "\u25b7 Details"
-			} else {
-				detailsText.style.display = "block"
-				detailsButton.innerText = "\u25bd Details"
-			}
-		}
-		detailsButton.addEventListener("click", handleDetails);
-		document.getElementById("graph").addEventListener("click", function() {
-			window.location = "/";
-		});
-	</script>
 	<script type="text/javascript">
 		// d3.js
 		{{ .D3JS }}
@@ -135,6 +79,7 @@ var flameGraphTemplate = template.Must(template.New("graph").Parse(`<!DOCTYPE ht
 	<script type="text/javascript">
 		var data = {{.Data}};
 	</script>
+	{{template "script" .}}
 	<script type="text/javascript">
 		var label = function(d) {
 			{{if eq .Unit "nanoseconds"}}
@@ -172,27 +117,18 @@ var flameGraphTemplate = template.Must(template.New("graph").Parse(`<!DOCTYPE ht
 			.datum(data)
 			.call(flameGraph);
 
-		document.getElementById("form").addEventListener("submit", function(event){
-			event.preventDefault();
-			search();
-		});
-
-		function search() {
-			var term = document.getElementById("term").value;
-			flameGraph.search(term);
+		function search(term) {
+			if (term == "") {
+				flameGraph.clear()
+			} else {
+				flameGraph.search(term)
+			}
 		}
-		document.getElementById("search").addEventListener("click", search);
-
-		function clear() {
-			document.getElementById('term').value = '';
-			flameGraph.clear();
-		}
-		document.getElementById("clear").addEventListener("click", clear);
 
 		function resetZoom() {
 			flameGraph.resetZoom();
 		}
-		document.getElementById("reset").addEventListener("click", resetZoom);
+		document.getElementById("resetzoom").addEventListener("click", resetZoom);
 		
 		window.addEventListener("resize", function() {
 			var width = document.getElementById("chart").clientWidth;
@@ -203,9 +139,13 @@ var flameGraphTemplate = template.Must(template.New("graph").Parse(`<!DOCTYPE ht
 			flameGraph.width(width);
 			flameGraph.resetZoom();
 		}, true);
+
+		viewer({{.BaseURL}}, null, search)
 	</script>
   </body>
-</html>`))
+</html>
+{{end}}`))
+}
 
 type flameGraphNode struct {
 	Name     string
@@ -327,10 +267,11 @@ func (ui *webInterface) flamegraph(w http.ResponseWriter, req *http.Request) {
 	// Embed in html.
 	data := struct {
 		Title           string
+		BaseURL         string
 		Legend          []string
-		Type            string
 		Unit            string
-		Types           []string
+		SampleType      string
+		SampleTypes     []string
 		Errors          []string
 		Data            template.JS
 		D3JS            template.JS
@@ -340,10 +281,11 @@ func (ui *webInterface) flamegraph(w http.ResponseWriter, req *http.Request) {
 		Help            map[string]string
 	}{
 		Title:           file,
+		BaseURL:         "/flamegraph",
 		Legend:          legend,
-		Type:            profileType,
 		Unit:            profileUnit,
-		Types:           profileTypes,
+		SampleType:      profileType,
+		SampleTypes:     profileTypes,
 		Errors:          catcher.errors,
 		D3JS:            template.JS(d3.D3JS),
 		D3TipJS:         template.JS(d3tip.D3TipJS),
@@ -353,7 +295,7 @@ func (ui *webInterface) flamegraph(w http.ResponseWriter, req *http.Request) {
 		Help:            ui.help,
 	}
 	html := &bytes.Buffer{}
-	if err := flameGraphTemplate.Execute(html, data); err != nil {
+	if err := webTemplate.ExecuteTemplate(html, "flame", data); err != nil {
 		http.Error(w, "internal template error", http.StatusInternalServerError)
 		ui.options.UI.PrintErr(err)
 		return

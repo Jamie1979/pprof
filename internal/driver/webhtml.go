@@ -101,6 +101,7 @@ button {
   margin-top: 2px;
   left: 0px;
   min-width: 5em;
+  white-space: nowrap;
 }
 .menu hr {
   background-color: #fff;
@@ -171,12 +172,9 @@ button {
 <div class="menu-header">
 View
 <div class="menu">
-{{if (ne .Type "top")}}
-  <button title="{{.Help.top}}" id="topbtn">Top</button>
-{{end}}
-{{if (ne .Type "dot")}}
-  <button title="{{.Help.graph}}" id="graphbtn">Graph</button>
-{{end}}
+<button title="{{.Help.top}}" id="topbtn">Top</button>
+<button title="{{.Help.graph}}" id="graphbtn">Graph</button>
+<button title="{{.Help.flamegraph}}" id="flamebtn">Flame Graph</button>
 <hr>
 <button title="{{.Help.details}}" id="details">Details</button>
 </div>
@@ -205,7 +203,17 @@ Refine
 
 <input id="searchbox" type="text" placeholder="Search regexp" autocomplete="off" autocapitalize="none" size=40>
 
-<span id="home">{{.Title}}</span>
+<span id="home">
+{{.Title}}
+
+{{if .SampleTypes}}
+<select id="type" onchange="location = this.value;">
+{{range .SampleTypes}}
+<option value="?t={{.}}"{{if eq . $.SampleType}} selected{{end}}>{{.}}</option>
+{{end}}
+</select>
+{{end}}
+</span>
 
 </div> <!-- menubar -->
 
@@ -230,7 +238,7 @@ Refine
 
 </div>
 {{template "script" .}}
-<script>viewer({{.BaseURL}}, {{.Nodes}})</script>
+<script>viewer({{.BaseURL}}, {{.Nodes}}, null)</script>
 </body>
 </html>
 {{end}}
@@ -453,25 +461,10 @@ function initPanAndZoom(svg, clickHandler) {
   svg.addEventListener("wheel", handleWheel, true)
 }
 
-function viewer(baseUrl, nodes) {
+function viewer(baseUrl, nodes, searchHandler) {
   'use strict';
 
   // Elements
-<<<<<<< HEAD
-  const detailsButton = document.getElementById("details")
-  const detailsText = document.getElementById("detailtext")
-  const actionBox = document.getElementById("actionbox")
-  const listButton = document.getElementById("list")
-  const disasmButton = document.getElementById("disasm")
-  const resetButton = document.getElementById("reset")
-  const flameGraphButton = document.getElementById("flamegraph")
-  const peekButton = document.getElementById("peek")
-  const focusButton = document.getElementById("focus")
-  const showButton = document.getElementById("show")
-  const ignoreButton = document.getElementById("ignore")
-  const hideButton = document.getElementById("hide")
-=======
->>>>>>> cc3455886fdc155f3c51ee3e6ab146e768e92b2a
   const search = document.getElementById("searchbox")
   const graph0 = document.getElementById("graph0")
   const svg = (graph0 == null ? null : graph0.parentElement)
@@ -493,14 +486,10 @@ function viewer(baseUrl, nodes) {
     if (detailsText != null) detailsText.style.display = "none"
   }
 
-<<<<<<< HEAD
-  function handleReset() { window.location.href = "/" }
-  function handleFlameGraph() { window.location.href = "/flamegraph" }
-=======
   function handleReset() { window.location.href = baseUrl }
   function handleTop() { navigate("/top", "f", false) }
   function handleGraph() { navigate("/", "f", false) }
->>>>>>> cc3455886fdc155f3c51ee3e6ab146e768e92b2a
+  function handleFlameGraph() { navigate("/flamegraph", "f", false) }
   function handleList() { navigate("/weblist", "f", true) }
   function handleDisasm() { navigate("/disasm", "f", true) }
   function handlePeek() { navigate("/peek", "f", true) }
@@ -528,6 +517,13 @@ function viewer(baseUrl, nodes) {
 
   function selectMatching() {
     searchAlarm = null
+
+    // Use custom search handler if supplied.
+    if (searchHandler) {
+      searchHandler(search.value)
+      return
+    }
+
     let re = null
     if (search.value != "") {
       try {
@@ -713,24 +709,6 @@ function viewer(baseUrl, nodes) {
   updateButtons()
 
   // Setup event handlers
-<<<<<<< HEAD
-  initPanAndZoom(svg, toggleSelect)
-  
-  function bindButtons(evt) {
-    detailsButton.addEventListener(evt, handleDetails)
-    resetButton.addEventListener(evt, handleReset)
-    flameGraphButton.addEventListener(evt, handleFlameGraph)
-    listButton.addEventListener(evt, handleList)
-    disasmButton.addEventListener(evt, handleDisasm)
-    peekButton.addEventListener(evt, handlePeek)
-    focusButton.addEventListener(evt, handleFocus)
-    showButton.addEventListener(evt, handleShow)
-    ignoreButton.addEventListener(evt, handleIgnore)
-    hideButton.addEventListener(evt, handleHide)
-  }
-  bindButtons("click")
-  bindButtons("touchstart")
-=======
   if (svg != null) {
     initPanAndZoom(svg, toggleSvgSelect)
   }
@@ -752,6 +730,7 @@ function viewer(baseUrl, nodes) {
   addAction("closedetails", handleCloseDetails)
   addAction("topbtn", handleTop)
   addAction("graphbtn", handleGraph)
+  addAction("flamebtn", handleFlameGraph)
   addAction("reset", handleReset)
   addAction("peek", handlePeek)
   addAction("list", handleList)
@@ -761,7 +740,6 @@ function viewer(baseUrl, nodes) {
   addAction("hide", handleHide)
   addAction("show", handleShow)
 
->>>>>>> cc3455886fdc155f3c51ee3e6ab146e768e92b2a
   search.addEventListener("input", handleSearch)
   search.addEventListener("keydown", handleKey)
 }
@@ -790,7 +768,7 @@ function viewer(baseUrl, nodes) {
 </div>
 
 {{template "script" .}}
-<script>viewer({{.BaseURL}}, {{.Nodes}})</script>
+<script>viewer({{.BaseURL}}, {{.Nodes}}, null)</script>
 </body>
 </html>
 {{end}}
